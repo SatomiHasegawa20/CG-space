@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>submit1</title>
+    <link href="./file/literally.css" rel="stylesheet">
+    <script src="https://unpkg.com/three@0.140.2/build/three.min.js"></script>
+    <script type="text/javascript" src="./file/dat.gui.js"></script>
+    <script type="text/javascript" src="./file/stats.js"></script>
+    <script type="text/javascript" src="./file/perlin.js"></script>
+    <script type="text/javascript" src="./file/jquery-1.8.2.js"></script>
+    <script type="text/javascript" src="./file/underscore-1.4.2.js"></script>
+    <script type="text/javascript" src="./file/literallycanvas.js"></script>
+    <script type="text/javascript" src="./file/MeshSurfaceSampler.js"></script>
+
+    <style>
+      body {
+          
+          margin: 0;
+          overflow: hidden;
+          font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      }
+
+      .fs-container {
+          width: 300px;
+          height: 300px;
+          margin: auto;
+          bottom: 20px;
+          position: absolute;
+          x: 0;
+          y: 0;
+      "
+      }
+
+      #canvas-output {
+          width: 300px;
+          height: 300px;
+      }
+  </style>
+  <div id="Stats-output">
+  </div>
+
+
+  <div class="fs-container">
+      <div id="canvas-output" style="float:left">
+      </div>
+  </div>
+
+
+  <div id="WebGL-output">
+  </div>
+    <script>
+
+    const canvas = document.createElement("canvas");
+    document.getElementById('canvas-output').appendChild(canvas);
+    $('#canvas-output').literallycanvas({
+      imageURLPrefix: './file/img',
+      primaryColor: 'orange',
+      backgroundColor: 'white'});
+
+
+
+      
+
+
+
+      // ページ読み込み
+      window.addEventListener('DOMContentLoaded', init);
+
+      function init() {
+
+        const stats = initStats();
+        // サイズ
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        let rot = 0; // 角度
+        let mouseX = 0; // マウス座標
+
+        // マウス座標管理用のベクトルを作成
+        const mouse = new THREE.Vector2();
+
+        // レンダラーを作成
+        const renderer = new THREE.WebGLRenderer({
+          canvas: document.querySelector('#myCanvas'),
+        }); 
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(width, height);
+        renderer.shadowMapEnabled = true;
+
+        // シーンを作成
+        const scene = new THREE.Scene();
+
+        // カメラを作成
+        const camera = new THREE.PerspectiveCamera(45, width / height);
+        camera.position.set(20, 20, 20);
+        camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+        // フォグを設定
+        scene.fog = new THREE.Fog(0x000000, 50, 3000);
+
+
+        const box = createMesh(new THREE.BoxGeometry(6, 6, 6), new THREE.MeshStandardMaterial);
+        box.position.set(30, 18, 0);
+        scene.add(box);
+
+
+
+        document.getElementById("WebGL-output").appendChild(renderer.domElement);
+
+
+        
+
+
+        const step = 0;
+
+
+        // GUIの準備
+        const controls = new function () {
+
+          this.light_rotate = false;
+
+          this.showTexture = true;
+
+          this.showCanvas = function () {
+              if (controls.showTexture) {
+                  $('.fs-container').show();
+              } else {
+                  $('.fs-container').hide();
+              }
+          };
+
+          this.regenerateMap = function () {
+              const date = new Date();
+              pn = new Perlin('rnd' + date.getTime());
+              fillWithPerlin(pn, ctx);
+              box.material.map.needsUpdate = true;
+              $('#cv').sketch();
+          };
+
+          this.applyTexture = function () {
+              box.material.map.needsUpdate = true;
+          }
+
+        };
+
+        
+
+
+        
+        
+
+        // 太陽
+        const sun_geometry = new THREE.SphereGeometry(4.5, 30, 30);
+        const sun_loader = new THREE.TextureLoader();
+        const sun_texture = sun_loader.load('./space_pic/sun.jpg');
+        const sun_material = new THREE.MeshStandardMaterial({
+          map: sun_texture,
+        });
+        const sun_mesh = new THREE.Mesh(sun_geometry, sun_material);
+        scene.add(sun_mesh);
+        sunRot = 0.0;
+
+        // 水星
+        const mercury_geometry = new THREE.SphereGeometry(1.1, 30, 30);
+        const mercury_loader = new THREE.TextureLoader();
+        const mercury_texture = mercury_loader.load('./space_pic/mercury.jpg');
+        const mercury_material = new THREE.MeshStandardMaterial({
+          map: mercury_texture,
+        });
+        const mercury_mesh = new THREE.Mesh(mercury_geometry, mercury_material);
+        scene.add(mercury_mesh);
+        mercuryRot = 0.0;
+
+        // 金星
+        const venus_geometry = new THREE.SphereGeometry(1.6, 30, 30);
+        const venus_loader = new THREE.TextureLoader();
+        const venus_texture = venus_loader.load('./space_pic/venus.jpg');
+        const venus_material = new THREE.MeshStandardMaterial({
+          map: venus_texture,
+        });
+        const venus_mesh = new THREE.Mesh(venus_geometry, venus_material);
+        scene.add(venus_mesh);
+        venusRot = 0.0;
+
+        // 地球
+        const earth_geometry = new THREE.SphereGeometry(2.3, 30, 30);
+        const earth_loader = new THREE.TextureLoader();
+        const earth_texture = earth_loader.load('./space_pic/earth.jpg');
+        const earth_material = new THREE.MeshStandardMaterial({
+          map: earth_texture,
+        });
+        const earth_mesh = new THREE.Mesh(earth_geometry, earth_material);
+        scene.add(earth_mesh);
+        earthRot = 0.0;
+
+        // 月
+        const moon_geometry = new THREE.SphereGeometry(0.7, 30, 30);
+        const moon_loader = new THREE.TextureLoader();
+        const moon_texture = moon_loader.load('./space_pic/moon.jpg');
+        const moon_material = new THREE.MeshStandardMaterial({
+          map: moon_texture,
+        });
+        const moon_mesh = new THREE.Mesh(moon_geometry, moon_material);
+        scene.add(moon_mesh);
+        moonRot = 0.0;
+
+        // 火星
+        const mars_geometry = new THREE.SphereGeometry(1.3, 30, 30);
+        const mars_loader = new THREE.TextureLoader();
+        const mars_texture = mars_loader.load('./space_pic/mars.jpg');
+        const mars_material = new THREE.MeshStandardMaterial({
+          map: mars_texture,
+        });
+        const mars_mesh = new THREE.Mesh(mars_geometry, mars_material);
+        scene.add(mars_mesh);
+        marsRot = 0.0;
+
+        // 木星
+        const jupiter_geometry = new THREE.SphereGeometry(3.8, 30, 30);
+        const jupiter_loader = new THREE.TextureLoader();
+        const jupiter_texture = jupiter_loader.load('./space_pic/jupiter.jpg');
+        const jupiter_material = new THREE.MeshStandardMaterial({
+          map: jupiter_texture,
+        });
+        const jupiter_mesh = new THREE.Mesh(jupiter_geometry, jupiter_material);
+        scene.add(jupiter_mesh);
+        jupiterRot = 0.0;
+
+        // 土星
+        const saturn_geometry = new THREE.SphereGeometry(2.8, 30, 30);
+        const saturn_loader = new THREE.TextureLoader();
+        const saturn_texture = saturn_loader.load('./space_pic/saturn.jpg');
+        const saturn_material = new THREE.MeshStandardMaterial({
+          map: saturn_texture,
+        });
+        const saturn_mesh = new THREE.Mesh(saturn_geometry, saturn_material);
+        scene.add(saturn_mesh);
+        saturnRot = 0.0;
+
+        // 土星の環1
+        const ring_geometry1 = new THREE.RingGeometry( 3.3, 4.3, 32 );
+        const ring_material = new THREE.MeshLambertMaterial({
+          color: 0x000000
+        });
+        const ring1 = new THREE.Mesh(ring_geometry1, ring_material);
+        scene.add(ring1);
+        ring1Rot = 0.0;
+
+        const sampler = new THREE.MeshSurfaceSampler(ring1).build();
+
+        const sphereGeometry = new THREE.SphereGeometry(0.04, 6, 6);
+        const sphereMaterial = new THREE.MeshBasicMaterial({
+          color: 0x6f514c
+        });
+        const spheres = new THREE.InstancedMesh(sphereGeometry, sphereMaterial, 6000);
+        scene.add(spheres);
+        spheresRot = 0.0;
+
+        const tempPosition = new THREE.Vector3();
+        const tempObject = new THREE.Object3D();
+        for (let i = 0; i < 6000; i++) {
+          sampler.sample(tempPosition);
+          tempObject.position.set(tempPosition.x, tempPosition.y, tempPosition.z);
+          tempObject.scale.setScalar(Math.random() * 0.5 + 0.5);
+          tempObject.updateMatrix();
+          spheres.setMatrixAt(i, tempObject.matrix);
+        }
+
+        // 土星の環2
+        const ring_geometry2 = new THREE.RingGeometry( 4.5, 5, 32 );
+        const ring_material2 = new THREE.MeshLambertMaterial({
+          color: 0x000000
+        });
+        const ring2 = new THREE.Mesh(ring_geometry2, ring_material2);
+        scene.add(ring2);
+        ring2Rot = 0.0;
+
+        const sampler2 = new THREE.MeshSurfaceSampler(ring2).build();
+
+        const sphereGeometry2 = new THREE.SphereGeometry(0.05, 6, 6);
+        const sphereMaterial2 = new THREE.MeshBasicMaterial({
+          color: 0x543f32
+        });
+        const spheres2 = new THREE.InstancedMesh(sphereGeometry2, sphereMaterial2, 6000);
+        scene.add(spheres2);
+        spheres2Rot = 0.0;
+
+        const tempPosition2 = new THREE.Vector3();
+        const tempObject2 = new THREE.Object3D();
+        for (let i = 0; i < 6000; i++) {
+          sampler2.sample(tempPosition2);
+          tempObject2.position.set(tempPosition2.x, tempPosition2.y, tempPosition2.z);
+          tempObject2.scale.setScalar(Math.random() * 0.5 + 0.5);
+          tempObject2.updateMatrix();
+          spheres2.setMatrixAt(i, tempObject2.matrix);
+        }
+
+        // 天王星
+        const uranus_geometry = new THREE.SphereGeometry(2.4, 30, 30);
+        const uranus_loader = new THREE.TextureLoader();
+        const uranus_texture = uranus_loader.load('./space_pic/uranus.jpg');
+        const uranus_material = new THREE.MeshStandardMaterial({
+          map: uranus_texture,
+        });
+        const uranus_mesh = new THREE.Mesh(uranus_geometry, uranus_material);
+        scene.add(uranus_mesh);
+        uranusRot = 0.0;
+
+        // 海王星
+        const neptune_geometry = new THREE.SphereGeometry(2.3, 30, 30);
+        const neptune_loader = new THREE.TextureLoader();
+        const neptune_texture = neptune_loader.load('./space_pic/neptune.jpg');
+        const neptune_material = new THREE.MeshStandardMaterial({
+          map: neptune_texture,
+        });
+        const neptune_mesh = new THREE.Mesh(neptune_geometry, neptune_material);
+        scene.add(neptune_mesh);
+        neptuneRot = 0.0;
+
+
+        // ハート型オブジェクトの塊
+        const x = 0, y = 0;
+
+        const heartShape = new THREE.Shape();
+
+        heartShape.moveTo( x + 0.5, y +0.5 );
+        heartShape.bezierCurveTo( x + 0.5, y + 0.5, x + 0.4, y, x, y );
+        heartShape.bezierCurveTo( x - 0.6, y, x - 0.6, y + 0.7,x - 0.6, y + 0.7 );
+        heartShape.bezierCurveTo( x - 0.6, y + 1.1, x - 0.3, y + 1.54, x + 0.5, y + 1.9 );
+        heartShape.bezierCurveTo( x + 1.2, y + 1.54, x + 1.6, y + 1.1, x + 1.6, y + 0.7 );
+        heartShape.bezierCurveTo( x + 1.6, y + 0.7, x + 1.6, y, x + 0.1, y );
+        heartShape.bezierCurveTo( x + 0.7, y, x + 0.5, y + 0.5, x + 0.5, y + 0.5 );        
+        const geometry = new THREE.ShapeGeometry( heartShape );
+
+
+        const meshList = [];
+        for (let i = 0; i < 100; i++) {
+          const material = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 1.0 });
+
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.position.x = (Math.random() - 2) * 15;
+          mesh.position.y = (Math.random() - 2) * 15;
+          mesh.position.z = (Math.random() - 2) * 15;
+          mesh.rotation.x = Math.random() * 2 * Math.PI;
+          mesh.rotation.y = Math.random() * 2 * Math.PI;
+          mesh.rotation.z = Math.random() * 2 * Math.PI;
+          scene.add(mesh);
+
+          meshList.push(mesh);
+        }
+
+
+        //ボタン追加
+        const gui = new dat.GUI();
+        gui.add(controls, "light_rotate");
+        gui.add(controls, "showTexture").onChange(controls.showCanvas);
+
+        
+
+        
+
+        
+        
+        
+        // 平行光源を作成
+        const light3 = new THREE.DirectionalLight(0xFFFFFF, 1);
+        scene.add(light3);
+
+        // 点光源を作成
+        const light = new THREE.PointLight(0xffffff, 2, 20, 0.1);
+        scene.add(light);
+
+        
+
+
+
+        // 星屑を作成
+        createStarField();
+
+        function createStarField() {
+          const vertices = [];
+          // 90000 個の頂点を作成
+          for (let i = 0; i < 90000; i++) {
+            const x = 4000 * (Math.random() - 0.5);
+            const y = 4000 * (Math.random() - 0.5);
+            const z = 4000 * (Math.random() - 0.5);
+
+            vertices.push(x, y, z);
+          }
+
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+          // マテリアルを作成
+          const material = new THREE.PointsMaterial({
+            size: 1.5,
+            color: 0xffffff,
+          });
+
+          // 物体を作成
+          const mesh = new THREE.Points(geometry, material);
+          scene.add(mesh);
+        }
+
+     
+
+        // マウス座標はマウスが動いた時のみ取得できる
+        document.addEventListener('mousemove', (event) => {
+          mouseX = event.pageX;
+        });
+
+        tick();
+
+        function createMesh(geom) {
+
+        const canvasMap = new THREE.Texture(canvas);
+        const mat = new THREE.MeshPhongMaterial();
+        mat.map = canvasMap;
+        const mesh = new THREE.Mesh(geom, mat);
+
+        return mesh;
+        }
+
+        function tick() {
+
+          box.material.map.needsUpdate = true;
+          // マウスの位置に応じて角度を設定
+          const targetRot = (mouseX / window.innerWidth) * 360;
+          // イージングの公式
+          rot += (targetRot - rot) * 0.02;
+
+          const radian = (rot * Math.PI) / 180;
+          // 角度に応じてカメラの位置を設定
+          camera.position.x = 70 * Math.sin(radian);
+          camera.position.z = 70 * Math.cos(radian);
+          // 原点方向を見つめる
+          camera.lookAt(new THREE.Vector3(0, 0, 0));
+          // レンダリング
+          renderer.render(scene, camera);
+
+          //ボタンが押された時だけライトを回転させる
+          if (controls.light_rotate) {
+            const t = Date.now() / 800;
+            const r = 20.0;
+            const lx = r * Math.cos(t);
+            const lz = r * Math.sin(t);
+            const ly = 6.0 + 5.0 * Math.sin(t / 3.0);
+            light.position.set(lx, ly, lz);
+            light.lookAt(new THREE.Vector3(0, 0, 0));
+            }
+
+          //ボックスの回転
+          stats.update();
+
+          box.rotation.y += 0.01;
+          box.rotation.x += 0.01;
+
+          //太陽
+          sun_mesh.rotation.y += 0.02;
+
+          //水星の位置
+          mercuryRot += 0.05;
+          mercury_mesh.position.x = Math.sin(mercuryRot)*8;
+          mercury_mesh.position.z = Math.cos(mercuryRot)*8;
+          mercury_mesh.rotation.y += 0.01; 
+
+          //金星の位置
+          venusRot += 0.04;
+          venus_mesh.position.x = Math.sin(venusRot)*13;
+          venus_mesh.position.z = Math.cos(venusRot)*13;
+          venus_mesh.rotation.x = -Math.PI*(0.014); 
+          venus_mesh.rotation.y -= 0.008; 
+
+          // // 地球の位置
+          earthRot += 0.03;
+          earth_mesh.position.x = Math.sin(earthRot)*20;
+          earth_mesh.position.z = Math.cos(earthRot)*20;
+          earth_mesh.rotation.x = -Math.PI*(0.13); 
+          earth_mesh.rotation.y += 0.06; 
+
+          // // 月の位置
+          moonRot += 0.001;
+          moon_mesh.position.x = Math.sin(moonRot)*4 + earth_mesh.position.x;
+          moon_mesh.position.z = Math.cos(moonRot)*4 + earth_mesh.position.z;
+          moon_mesh.rotation.x = -Math.PI*(0.28); 
+          moon_mesh.rotation.y += 0.03; 
+
+          //火星の位置
+          marsRot += 0.01;
+          mars_mesh.position.x = Math.sin(marsRot)*26;
+          mars_mesh.position.z = Math.cos(marsRot)*26;
+          mars_mesh.rotation.x = -Math.PI*(0.14); 
+          mars_mesh.rotation.y += 0.05; 
+
+          //木星の位置
+          jupiterRot += 0.008;
+          jupiter_mesh.position.x = Math.sin(jupiterRot)*32;
+          jupiter_mesh.position.z = Math.cos(jupiterRot)*32;
+          jupiter_mesh.rotation.x = -Math.PI*(0.02); 
+          jupiter_mesh.rotation.y += 0.11;
+
+          //土星の位置
+          saturnRot += 0.007;
+          saturn_mesh.position.x = Math.sin(saturnRot)*43;
+          saturn_mesh.position.z = Math.cos(saturnRot)*43;
+          saturn_mesh.rotation.x = -Math.PI*(0.15); 
+          saturn_mesh.rotation.y += 0.09; 
+
+          
+          //土星の環1の位置
+          ring1Rot += 0.007;
+          ring1.position.x = Math.sin(ring1Rot)*43;
+          ring1.position.z = Math.cos(ring1Rot)*43;
+          ring1.rotation.x = -Math.PI*(0.66);
+
+          //土星の環1の位置
+          spheresRot += 0.007;
+          spheres.position.x = Math.sin(spheresRot)*43;
+          spheres.position.z = Math.cos(spheresRot)*43;
+          spheres.rotation.x = -Math.PI*(0.66);
+
+          //土星の環2の位置
+          ring2Rot += 0.007;
+          ring2.position.x = Math.sin(ring2Rot)*43;
+          ring2.position.z = Math.cos(ring2Rot)*43;
+          ring2.rotation.x = -Math.PI*(0.66); 
+
+          //土星の環2の位置
+          spheres2Rot += 0.007;
+          spheres2.position.x = Math.sin(spheres2Rot)*43;
+          spheres2.position.z = Math.cos(spheres2Rot)*43;
+          spheres2.rotation.x = -Math.PI*(0.66); 
+
+          //天王星の位置
+          uranusRot += 0.005;
+          uranus_mesh.position.x = Math.sin(uranusRot)*51;
+          uranus_mesh.position.z = Math.cos(uranusRot)*51;
+          uranus_mesh.rotation.x = -Math.PI*(0.46); 
+          uranus_mesh.rotation.y += 0.07; 
+
+          //海王星の位置
+          neptuneRot += 0.004;
+          neptune_mesh.position.x = Math.sin(neptuneRot)*57;
+          neptune_mesh.position.z = Math.cos(neptuneRot)*57;
+          neptune_mesh.rotation.x = -Math.PI*(0.16); 
+          neptune_mesh.rotation.y += 0.075; 
+
+          requestAnimationFrame(tick);
+        }
+
+        function initStats() {
+
+            const stats = new Stats();
+            stats.setMode(0); 
+
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.left = '0px';
+            stats.domElement.style.top = '0px';
+
+            document.getElementById("Stats-output").appendChild(stats.domElement);
+
+            return stats;
+            }
+      }
+    </script>
+  </head>
+  <body>
+    <canvas id="myCanvas"></canvas>
+  </body>
+</html>
